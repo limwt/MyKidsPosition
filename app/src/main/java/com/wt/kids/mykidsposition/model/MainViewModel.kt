@@ -23,7 +23,6 @@ class MainViewModel @Inject constructor(
         get() = _currentAddress
 
     fun updateCurrentPosition(address: String) {
-        //logger.logD(logTag, "updateCurrentAddress")
         val call = repository.getSearch(address)
         Log.d("[Jeff]ViewModel", "updateCurrentPosition")
         call.enqueue(object : Callback<String> {

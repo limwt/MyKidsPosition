@@ -26,7 +26,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val logTag = this::class.java.simpleName
-    private val locationPermissionRequest = registerForActivityResult(
+    private val permissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         when {
@@ -35,7 +35,9 @@ class MainActivity : ComponentActivity() {
             }
             permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
                 showMainView()
-            } else -> {
+            }
+            permissions.getOrDefault(Manifest.permission.SEND_SMS, false) -> logger.logD(logTag, "get sms permission")
+            else -> {
                 // No location access granted.
             }
         }
@@ -52,7 +54,7 @@ class MainActivity : ComponentActivity() {
         if (verifyPermissions(this)) {
             showMainView()
         } else {
-            requestLocationPermission()
+            requestPermissions()
         }
     }
 
@@ -72,15 +74,17 @@ class MainActivity : ComponentActivity() {
         viewModel.updateCurrentPosition(address = "걸포 파머스 영어학원")
     }
 
-    private fun requestLocationPermission() {
-        locationPermissionRequest.launch(arrayOf(
+    private fun requestPermissions() {
+        permissionRequest.launch(arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION))
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.SEND_SMS))
     }
 
     private fun verifyPermissions(context: Context): Boolean {
         if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-            || context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            || context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+            || context.checkSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             return false
         }
         return true

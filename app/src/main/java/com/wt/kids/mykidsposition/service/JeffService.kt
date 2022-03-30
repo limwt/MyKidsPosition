@@ -5,20 +5,27 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.location.Location
+import android.location.LocationListener
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.wt.kids.mykidsposition.BuildConfig
+import com.wt.kids.mykidsposition.utils.LocationUtils
 import com.wt.kids.mykidsposition.utils.Logger
+import com.wt.kids.mykidsposition.utils.SmsUtils
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class JeffService : Service() {
+class JeffService : Service(), LocationListener {
     private val logTag = this::class.java.simpleName
     private val channelId = BuildConfig.APPLICATION_ID
     private val channelName = "Jeff"
+    private var sendingSms = true
 
     @Inject lateinit var logger: Logger
+    @Inject lateinit var locationUtils: LocationUtils
+    @Inject lateinit var smsUtils: SmsUtils
 
     override fun onCreate() {
         super.onCreate()
@@ -29,6 +36,7 @@ class JeffService : Service() {
         super.onStartCommand(intent, flags, startId)
         logger.logD(logTag, "onStartCommand")
         startNotificationService()
+        locationUtils.registerLocationUpdates(this)
         return START_STICKY
     }
 
@@ -49,5 +57,13 @@ class JeffService : Service() {
             .setContentTitle("")
             .setContentText("").build()
         startForeground(1, notification)
+    }
+
+    override fun onLocationChanged(p: Location) {
+        if (sendingSms) {
+            sendingSms = false
+            smsUtils.sendSms()
+            logger.logD(logTag, "onLocationChanged : ${p.latitude}, ${p.longitude}")
+        }
     }
 }
