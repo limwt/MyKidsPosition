@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,11 +13,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
+import com.wt.kids.mykidsposition.di.Repository
 import com.wt.kids.mykidsposition.model.MainViewModel
 import com.wt.kids.mykidsposition.service.JeffService
 import com.wt.kids.mykidsposition.ui.compose.MainView
-import com.wt.kids.mykidsposition.utils.LocationUtils
 import com.wt.kids.mykidsposition.ui.theme.MyKidsPositionTheme
+import com.wt.kids.mykidsposition.utils.LocationUtils
 import com.wt.kids.mykidsposition.utils.Logger
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var logger: Logger
     @Inject lateinit var locationUtils: LocationUtils
+    @Inject lateinit var repository: Repository
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,12 +64,12 @@ class MainActivity : ComponentActivity() {
             MyKidsPositionTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-                    MainView(viewModel = viewModel, logger = logger)
+                    MainView(viewModel = viewModel)
                 }
             }
         }
 
-        viewModel.updateCurrentPosition(address = locationUtils.getCurrentAddress())
+        viewModel.updateCurrentPosition(address = "걸포 파머스 영어학원")
     }
 
     private fun requestLocationPermission() {

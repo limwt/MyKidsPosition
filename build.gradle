@@ -5,7 +5,7 @@ buildscript {
         rxjava_version = '3.1.2'
         rxkotlin_version = '3.0.0'
         rxbinding_version = '4.0.0'
-        hilt_version = '2.40'
+        hilt_version = '2.41'
     }
 
     dependencies {

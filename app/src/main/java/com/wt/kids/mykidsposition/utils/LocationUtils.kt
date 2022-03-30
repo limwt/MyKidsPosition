@@ -8,8 +8,18 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
 import androidx.core.app.ActivityCompat
+import com.google.gson.GsonBuilder
+import com.wt.kids.mykidsposition.service.LocationData
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.io.BufferedReader
 import java.io.IOException
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,6 +63,42 @@ class LocationUtils @Inject constructor(
             e.printStackTrace()
         }
 
+        CoroutineScope(Dispatchers.IO).launch {
+            searchPlace("걸포 파머스 영어학원")
+        }
+
         return address
+    }
+
+    //naver place search api.
+    fun searchPlace(place: String) {
+        val clientId = "cDiBU6P02t8um9zOW5ug"
+        val clientSecret = "1m4XlKEDIL"
+        try {
+            val text = URLEncoder.encode(place, "UTF-8")
+            val apiURL = "https://openapi.naver.com/v1/search/local.json?query=$text&display=20&start=1&sort=random"
+            val url = URL(apiURL)
+            val con = url.openConnection() as HttpURLConnection
+            con.requestMethod = "GET"
+            con.setRequestProperty("X-Naver-Client-Id", clientId)
+            con.setRequestProperty("X-Naver-Client-Secret", clientSecret)
+            val responseCode = con.responseCode
+            val br = if(responseCode==200) {
+                BufferedReader(InputStreamReader(con.inputStream))
+            } else {
+                BufferedReader(InputStreamReader(con.errorStream))
+            }
+
+            val response = StringBuffer()
+            while (br.readLine() != null) {
+                response.append(br.readLine())
+            }
+
+            br.close()
+            val result = GsonBuilder().setPrettyPrinting().create().fromJson(response.trim().toString(), LocationData::class.java)
+            logger.logD(logTag, "response : $result")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
