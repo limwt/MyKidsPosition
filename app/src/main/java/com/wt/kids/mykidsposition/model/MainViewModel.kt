@@ -1,5 +1,6 @@
 package com.wt.kids.mykidsposition.model
 
+import android.text.Html
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -28,8 +29,8 @@ class MainViewModel @Inject constructor(
         call.enqueue(object : Callback<String> {
             override fun onResponse(call: Call<String>, response: Response<String>) {
                 if (response.isSuccessful) {
-                    val locationData = GsonBuilder().setPrettyPrinting().create().fromJson(response.body(), LocationData::class.java)
-                    _currentAddress.value = locationData.items[0].title
+                    val locationData = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().fromJson(response.body(), LocationData::class.java)
+                    _currentAddress.value = Html.fromHtml(locationData.items[0].title, Html.FROM_HTML_MODE_LEGACY).toString()
                 }
             }
 
