@@ -17,6 +17,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyKidsPosition">
 
+        <meta-data
+            android:name="com.naver.maps.map.CLIENT_ID"
+            android:value="ktq5tw7vkh" />
+
+
         <service
             android:name=".service.JeffService"
             android:enabled="true"

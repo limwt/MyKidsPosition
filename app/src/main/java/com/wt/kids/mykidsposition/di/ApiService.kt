@@ -13,6 +13,8 @@ interface ApiService {
         @Header("X-Naver-Client-Id") id: String,
         @Header("X-Naver-Client-Secret") secret: String,
         @Path("type") type: String,
-        @Query("query") query: String
+        @Query("query") query: String,
+        @Query("display") display: Int,
+        @Query("start") start: Int
     ): Call<String>
 }

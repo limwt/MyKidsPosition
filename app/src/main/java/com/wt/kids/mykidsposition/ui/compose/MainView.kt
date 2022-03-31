@@ -1,19 +1,20 @@
 package com.wt.kids.mykidsposition.ui.compose
 
 import android.util.Log
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Place
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -25,22 +26,54 @@ fun MainView(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val address: String by viewModel.currentAddress.observeAsState("")
-    CurrentPositionContent(address = address)
+    MainContentView(address = address)
 }
 
 @Composable
-fun CurrentPositionContent(address: String) {
-    Scaffold(bottomBar = { BottomBar() }) {
-        ContentView(address = address)
+fun MainContentView(address: String) {
+    val context = LocalContext.current
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    Toast.makeText(context, "Floating Button!!!", Toast.LENGTH_SHORT).show()
+                },
+                backgroundColor = Color.Blue,
+                content = {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_input_add),
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
+            )
+        },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Box() {
+            PlaceEditText()
+            Column() {
+                CurrentAddressText(address)
+                FavoriteListView()
+            }
+        }
     }
 }
 
 @Composable
-fun ContentView(address: String) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        CurrentAddressText(address)
-        FavoriteListView()
-    }
+fun PlaceEditText() {
+    var text by rememberSaveable { mutableStateOf("") }
+    TextField(
+        value = text,
+        onValueChange = {
+            text = it
+        },
+        label = { Text(text = "등록할 위치 검색") },
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.Transparent)
+            .padding(10.dp)
+    )
 }
 
 @Composable
@@ -93,6 +126,6 @@ fun BottomBar() {
 @Composable
 fun DefaultPreview() {
     MyKidsPositionTheme {
-        MainView(viewModel = hiltViewModel())
+        MainContentView(address = "테스트 위치")
     }
 }

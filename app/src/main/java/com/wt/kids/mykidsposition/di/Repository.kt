@@ -7,7 +7,9 @@ class Repository @Inject constructor(private val apiService: ApiService) {
     fun getSearch(query: String) = apiService.getSearch(
         id = ApiConstants.CLIENT_ID.value,
         secret = ApiConstants.CLIENT_SECRET.value,
-        type = ApiConstants.SEARCH_TYPE.value,
-        query = query
+        type = ApiConstants.SEARCH_TYPE_LOCAL.value,
+        query = query,
+        display = 10,
+        start = 1
     )
 }

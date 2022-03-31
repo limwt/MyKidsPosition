@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import com.wt.kids.mykidsposition.di.Repository
 import com.wt.kids.mykidsposition.model.MainViewModel
 import com.wt.kids.mykidsposition.service.JeffService
-import com.wt.kids.mykidsposition.ui.compose.MainView
+import com.wt.kids.mykidsposition.ui.compose.PlaceSearchView
 import com.wt.kids.mykidsposition.ui.theme.MyKidsPositionTheme
 import com.wt.kids.mykidsposition.utils.LocationUtils
 import dagger.hilt.android.AndroidEntryPoint
@@ -65,12 +65,13 @@ class MainActivity : ComponentActivity() {
             MyKidsPositionTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-                    MainView(viewModel = viewModel)
+                    //MainView(viewModel = viewModel)
+                    PlaceSearchView()
                 }
             }
         }
 
-        viewModel.updateCurrentPosition(address = "걸포 파머스 영어학원")
+        //viewModel.updateCurrentPosition(address = "파머스 영어학원")
     }
 
     private fun requestPermissions() {

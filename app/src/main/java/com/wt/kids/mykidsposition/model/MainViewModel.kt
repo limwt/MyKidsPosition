@@ -30,6 +30,7 @@ class MainViewModel @Inject constructor(
             override fun onResponse(call: Call<String>, response: Response<String>) {
                 if (response.isSuccessful) {
                     val locationData = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().fromJson(response.body(), LocationData::class.java)
+                    Timber.tag(logTag).d("currentPosition : $locationData")
                     _currentAddress.value = Html.fromHtml(locationData.items[0].title, Html.FROM_HTML_MODE_LEGACY).toString()
                 }
             }
