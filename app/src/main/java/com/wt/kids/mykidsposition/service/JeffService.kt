@@ -11,9 +11,9 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.wt.kids.mykidsposition.BuildConfig
 import com.wt.kids.mykidsposition.utils.LocationUtils
-import com.wt.kids.mykidsposition.utils.Logger
 import com.wt.kids.mykidsposition.utils.SmsUtils
 import dagger.hilt.android.AndroidEntryPoint
+import timber.log.Timber
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -21,27 +21,25 @@ class JeffService : Service(), LocationListener {
     private val logTag = this::class.java.simpleName
     private val channelId = BuildConfig.APPLICATION_ID
     private val channelName = "Jeff"
-    private var sendingSms = true
-
-    @Inject lateinit var logger: Logger
+    
     @Inject lateinit var locationUtils: LocationUtils
     @Inject lateinit var smsUtils: SmsUtils
 
     override fun onCreate() {
         super.onCreate()
-        logger.logD(logTag, "onCreate")
+        Timber.tag(logTag).d("onCreate")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        logger.logD(logTag, "onStartCommand")
+        Timber.tag(logTag).d("onStartCommand")
         startNotificationService()
         locationUtils.registerLocationUpdates(this)
         return START_STICKY
     }
 
     override fun onBind(intent: Intent): IBinder? {
-        logger.logD(logTag, "onBind")
+        Timber.tag(logTag).d("onBind")
         return null
     }
 
@@ -60,10 +58,11 @@ class JeffService : Service(), LocationListener {
     }
 
     override fun onLocationChanged(p: Location) {
-        if (sendingSms) {
+        // TEST Sending SMS
+        /*if (sendingSms) {
             sendingSms = false
             smsUtils.sendSms()
-            logger.logD(logTag, "onLocationChanged : ${p.latitude}, ${p.longitude}")
-        }
+            Timber.tag(logTag).d("onLocationChanged : ${p.latitude}, ${p.longitude}")
+        }*/
     }
 }

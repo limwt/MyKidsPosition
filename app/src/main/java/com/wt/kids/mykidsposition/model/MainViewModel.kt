@@ -1,7 +1,6 @@
 package com.wt.kids.mykidsposition.model
 
 import android.text.Html
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -12,19 +11,21 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val repository: Repository
 ) : ViewModel() {
+    private val logTag = "[Jeff]${this::class.java.simpleName}"
     private val _currentAddress = MutableLiveData<String>()
     val currentAddress: LiveData<String>
         get() = _currentAddress
 
     fun updateCurrentPosition(address: String) {
         val call = repository.getSearch(address)
-        Log.d("[Jeff]ViewModel", "updateCurrentPosition")
+        Timber.tag(logTag).d("updateCurrentPosition")
         call.enqueue(object : Callback<String> {
             override fun onResponse(call: Call<String>, response: Response<String>) {
                 if (response.isSuccessful) {

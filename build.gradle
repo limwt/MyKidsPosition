@@ -6,16 +6,37 @@ buildscript {
         rxkotlin_version = '3.0.0'
         rxbinding_version = '4.0.0'
         hilt_version = '2.41'
+        coroutines_version = '1.5.0'
+        kotlin_version = '1.6.10'
+        appcompat_version = '1.4.1'
+    }
+
+    repositories {
+        google()
+        maven {
+            url 'https://naver.jfrog.io/artifactory/maven/'
+        }
+        mavenCentral()
     }
 
     dependencies {
         classpath 'com.google.dagger:hilt-android-gradle-plugin:2.40'
     }
 }
+
 plugins {
     id 'com.android.application' version '7.1.2' apply false
     id 'com.android.library' version '7.1.2' apply false
     id 'org.jetbrains.kotlin.android' version '1.6.10' apply false
+}
+
+allprojects {
+    repositories {
+        google()
+        maven {
+            url 'https://naver.jfrog.io/artifactory/maven/'
+        }
+    }
 }
 
 task clean(type: Delete) {

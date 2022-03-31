@@ -5,6 +5,7 @@ import android.util.Log
 import dagger.hilt.android.HiltAndroidApp
 import io.reactivex.rxjava3.exceptions.UndeliverableException
 import io.reactivex.rxjava3.plugins.RxJavaPlugins
+import timber.log.Timber
 import java.io.IOException
 import java.net.SocketException
 
@@ -12,6 +13,7 @@ import java.net.SocketException
 class JeffApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        Timber.plant(Timber.DebugTree())
         setRxJavaPluginHandler()
     }
 

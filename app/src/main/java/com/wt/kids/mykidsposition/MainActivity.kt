@@ -19,13 +19,13 @@ import com.wt.kids.mykidsposition.service.JeffService
 import com.wt.kids.mykidsposition.ui.compose.MainView
 import com.wt.kids.mykidsposition.ui.theme.MyKidsPositionTheme
 import com.wt.kids.mykidsposition.utils.LocationUtils
-import com.wt.kids.mykidsposition.utils.Logger
 import dagger.hilt.android.AndroidEntryPoint
+import timber.log.Timber
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private val logTag = this::class.java.simpleName
+    private val logTag = "[Jeff]${this::class.java.simpleName}"
     private val permissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -36,14 +36,13 @@ class MainActivity : ComponentActivity() {
             permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
                 showMainView()
             }
-            permissions.getOrDefault(Manifest.permission.SEND_SMS, false) -> logger.logD(logTag, "get sms permission")
+            permissions.getOrDefault(Manifest.permission.SEND_SMS, false) -> Timber.tag(logTag).d("get sms permission")
             else -> {
                 // No location access granted.
             }
         }
     }
 
-    @Inject lateinit var logger: Logger
     @Inject lateinit var locationUtils: LocationUtils
     @Inject lateinit var repository: Repository
     private val viewModel: MainViewModel by viewModels()

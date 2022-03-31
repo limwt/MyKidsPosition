@@ -8,13 +8,13 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.telephony.SmsManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SmsUtils @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val logger: Logger
+    @ApplicationContext private val context: Context
 ) {
     private val logTag = this::class.java.simpleName
 
@@ -29,7 +29,7 @@ class SmsUtils @Inject constructor(
         context.registerReceiver(object: BroadcastReceiver() {
             override fun onReceive(p0: Context?, p1: Intent?) {
                 when (resultCode) {
-                    Activity.RESULT_OK -> logger.logD(logTag, "Sms sent")
+                    Activity.RESULT_OK -> Timber.tag(logTag).d("Sms sent")
                     else -> {}
                 }
             }
