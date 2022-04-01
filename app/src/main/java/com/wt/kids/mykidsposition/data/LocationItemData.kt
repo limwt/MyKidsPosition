@@ -1,4 +1,4 @@
-package com.wt.kids.mykidsposition.service
+package com.wt.kids.mykidsposition.data
 
 data class LocationItemData(
     val title: String = "",

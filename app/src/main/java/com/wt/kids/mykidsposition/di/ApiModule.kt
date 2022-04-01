@@ -9,15 +9,16 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import retrofit2.adapter.rxjava3.RxJava3CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.converter.scalars.ScalarsConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object ApiModule {
     @Provides
-    fun provideBaseUrl() = ApiConstants.BASE_URL.value
+    fun provideBaseUrl() = ApiConstants.TMAP_BASE_URL.value//ApiConstants.KAKAO_BASE_URL.value
 
     @Singleton
     @Provides
@@ -25,10 +26,11 @@ object ApiModule {
         val loggingInterceptor = HttpLoggingInterceptor()
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
         OkHttpClient.Builder()
+            .connectTimeout(5000L, TimeUnit.MILLISECONDS)
             .addInterceptor(loggingInterceptor)
             .build()
     } else {
-        OkHttpClient.Builder().build()
+        OkHttpClient.Builder().connectTimeout(5000L, TimeUnit.MILLISECONDS).build()
     }
 
     @Singleton
@@ -37,7 +39,7 @@ object ApiModule {
         return Retrofit.Builder()
             .client(okHttpClient)
             .baseUrl(provideBaseUrl())
-            .addConverterFactory(ScalarsConverterFactory.create())
+            .addCallAdapterFactory(RxJava3CallAdapterFactory.create())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }

@@ -1,22 +1,12 @@
 package com.wt.kids.mykidsposition.ui.compose
 
-import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Place
-import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.wt.kids.mykidsposition.model.MainViewModel
 import com.wt.kids.mykidsposition.ui.theme.MyKidsPositionTheme
@@ -25,11 +15,15 @@ import com.wt.kids.mykidsposition.ui.theme.MyKidsPositionTheme
 fun MainView(
     viewModel: MainViewModel = hiltViewModel()
 ) {
-    val address: String by viewModel.currentAddress.observeAsState("")
-    MainContentView(address = address)
+    Column(modifier = Modifier
+        .background(Color.White)
+        .fillMaxSize()) {
+        PlaceSearchView(viewModel = viewModel)
+        PlaceSearchResultListView(viewModel = viewModel)
+    }
 }
 
-@Composable
+/*@Composable
 fun MainContentView(address: String) {
     val context = LocalContext.current
     Scaffold(
@@ -58,36 +52,6 @@ fun MainContentView(address: String) {
             }
         }
     }
-}
-
-@Composable
-fun PlaceEditText() {
-    var text by rememberSaveable { mutableStateOf("") }
-    TextField(
-        value = text,
-        onValueChange = {
-            text = it
-        },
-        label = { Text(text = "등록할 위치 검색") },
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.Transparent)
-            .padding(10.dp)
-    )
-}
-
-@Composable
-fun CurrentAddressText(address: String) {
-    Text(
-        text = "현위치 : $address",
-        modifier = Modifier.padding(bottom = 8.dp),
-        style = MaterialTheme.typography.h5,
-    )
-}
-
-@Composable
-fun FavoriteListView() {
-    Text(text = "즐겨찾기 리스트")
 }
 
 @Composable
@@ -120,12 +84,12 @@ fun BottomBar() {
             }
         )
     }
-}
+}*/
 
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     MyKidsPositionTheme {
-        MainContentView(address = "테스트 위치")
+        MainView()
     }
 }

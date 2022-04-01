@@ -12,4 +12,8 @@ class Repository @Inject constructor(private val apiService: ApiService) {
         display = 10,
         start = 1
     )
+
+    fun getSearchLocation(keyword: String) = apiService.getSearchLocation(keyword = keyword)
+
+    fun getSearchKeyword(query: String) = apiService.getSearchKeyword(query = query)
 }

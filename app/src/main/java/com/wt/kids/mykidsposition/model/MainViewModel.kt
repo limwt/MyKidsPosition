@@ -1,16 +1,17 @@
 package com.wt.kids.mykidsposition.model
 
-import android.text.Html
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.gson.GsonBuilder
+import com.wt.kids.mykidsposition.data.tmap.SearchPoiInfo
+import com.wt.kids.mykidsposition.data.tmap.SearchResponseData
 import com.wt.kids.mykidsposition.di.Repository
-import com.wt.kids.mykidsposition.service.LocationData
+import com.wt.kids.mykidsposition.utils.RxUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.Disposable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -19,24 +20,36 @@ class MainViewModel @Inject constructor(
     private val repository: Repository
 ) : ViewModel() {
     private val logTag = "[Jeff]${this::class.java.simpleName}"
-    private val _currentAddress = MutableLiveData<String>()
-    val currentAddress: LiveData<String>
-        get() = _currentAddress
+    private val gSon = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
+    private var reqDisposable: Disposable? = null
+    private val _searchPoiInfo = MutableLiveData<SearchPoiInfo>()
+    val searPoiInfo: LiveData<SearchPoiInfo>
+        get() = _searchPoiInfo
 
-    fun updateCurrentPosition(address: String) {
-        val call = repository.getSearch(address)
-        Timber.tag(logTag).d("updateCurrentPosition")
-        call.enqueue(object : Callback<String> {
-            override fun onResponse(call: Call<String>, response: Response<String>) {
-                if (response.isSuccessful) {
-                    val locationData = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().fromJson(response.body(), LocationData::class.java)
-                    Timber.tag(logTag).d("currentPosition : $locationData")
-                    _currentAddress.value = Html.fromHtml(locationData.items[0].title, Html.FROM_HTML_MODE_LEGACY).toString()
-                }
+    fun searchPlace(keyword: String) {
+        clearDisposable()
+        reqDisposable = repository.getSearchLocation(keyword = keyword) // repository.getSearchKeyword(query = keyword)
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .map { response ->
+                if (response.isSuccessful) response.body()?.string() ?: ""
+                else response.errorBody()?.string() ?: ""
             }
+            .subscribe({ result ->
+                Timber.tag(logTag).d("response")
+                //val response = gSon.fromJson(result, ResultSearchKeyword::class.java)
+                val response = gSon.fromJson(result, SearchResponseData::class.java)
+                _searchPoiInfo.value = response.searchPoiInfo
+                clearDisposable()
+            }, { error ->
+                Timber.tag(logTag).e("Error : ${error.message}")
+                clearDisposable()
+            })
+        RxUtils.addDisposable(reqDisposable)
+    }
 
-            override fun onFailure(call: Call<String>, t: Throwable) {
-            }
-        })
+    private fun clearDisposable() {
+        RxUtils.clearDispose(reqDisposable)
+        reqDisposable = null
     }
 }
