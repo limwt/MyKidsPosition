@@ -3,10 +3,7 @@ package com.wt.kids.mykidsposition.utils
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Address
-import android.location.Geocoder
-import android.location.Location
-import android.location.LocationManager
+import android.location.*
 import androidx.core.app.ActivityCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
@@ -22,6 +19,12 @@ class LocationUtils @Inject constructor(
     private val logTag = this::class.java.simpleName
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
+    private val locationListener = LocationListener {
+        val longitude = it.longitude
+        val latitude = it.latitude
+        logger.logD(logTag, "update location : $longitude, $latitude")
+    }
+
     private fun getLocationData(): Location? {
         logger.logD(logTag, "getLocationData")
         var location: Location? = null
@@ -31,6 +34,13 @@ class LocationUtils @Inject constructor(
         }
 
         return location
+    }
+
+    fun registerLocationSrv() {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            || ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000L, 1.0f, locationListener)
+        }
     }
 
     fun getCurrentAddress(): String {
