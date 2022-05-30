@@ -25,7 +25,7 @@ class LocationUtils @Inject constructor(
         logger.logD(logTag, "update location : $longitude, $latitude")
     }
 
-    private fun getLocationData(): Location? {
+    fun getLocationData(): Location? {
         logger.logD(logTag, "getLocationData")
         var location: Location? = null
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
