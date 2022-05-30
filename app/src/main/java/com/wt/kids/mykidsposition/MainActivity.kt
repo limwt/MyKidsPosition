@@ -4,9 +4,22 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.PointF
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.View
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.naver.maps.geometry.LatLng
 import com.naver.maps.map.LocationTrackingMode
 import com.naver.maps.map.MapView
@@ -14,29 +27,36 @@ import com.naver.maps.map.NaverMap
 import com.naver.maps.map.OnMapReadyCallback
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.util.FusedLocationSource
+import com.naver.maps.map.util.MarkerIcons
+import com.wt.kids.mykidsposition.data.response.ResponseItemsData
+import com.wt.kids.mykidsposition.model.MainViewModel
 import com.wt.kids.mykidsposition.service.JeffService
 import com.wt.kids.mykidsposition.utils.LocationUtils
 import com.wt.kids.mykidsposition.utils.Logger
+import com.wt.kids.mykidsposition.view.adapter.PlaceListAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity(), OnMapReadyCallback {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClickListener {
     private val logTag = this::class.java.simpleName
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         when {
             permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
-                showMainView()
+                startService()
             }
             permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
-                showMainView()
+                startService()
             } else -> {
                 // No location access granted.
             }
         }
     }
+
+    private val placeListAdapter = PlaceListAdapter()
+    private val viewModel: MainViewModel by viewModels()
 
     @Inject lateinit var logger: Logger
     @Inject lateinit var locationUtils: LocationUtils
@@ -44,39 +64,80 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var naverMap: NaverMap
     private lateinit var locationSource: FusedLocationSource
     private lateinit var mapView: MapView
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var bottomSheetContainer: View
+    private lateinit var searchPlaceButton: FloatingActionButton
+    private lateinit var editTextView: EditText
+    private lateinit var searchButton: ImageView
+    private lateinit var bottomSheetTitleText: TextView
+    private lateinit var searchEditTextContainer: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        logger.logD(logTag, "onCreate")
         setContentView(R.layout.activity_main)
-        mapView = findViewById(R.id.mapView)
-        locationSource = FusedLocationSource(this@MainActivity, LOCATION_PERMISSION_REQUEST_CODE)
-        // onCreate 연결
-        mapView.onCreate(savedInstanceState)
-        // 맵 가져오기 -> onMapReady
-        mapView.getMapAsync(this)
+        initViews(savedInstanceState)
 
         if (verifyPermissions(this)) {
-            showMainView()
+            startService()
         } else {
             requestLocationPermission()
         }
     }
 
-    private fun showMainView() {
-        val intent = Intent(this, JeffService::class.java)
-        startForegroundService(intent)
-
-
-        /*setContent {
-            MyKidsPositionTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-                    MainView(viewModel = viewModel, logger = logger)
-                }
+    private fun initViews(savedInstanceState: Bundle?) {
+        logger.logD(logTag, "initViews")
+        mapView = findViewById(R.id.mapView)
+        recyclerView = findViewById(R.id.recyclerView)
+        bottomSheetContainer = findViewById(R.id.bottomSheetContainer)
+        searchPlaceButton = findViewById(R.id.searchPlaceButton)
+        searchPlaceButton.setOnClickListener {
+            searchEditTextContainer.visibility = View.VISIBLE
+        }
+        editTextView = findViewById(R.id.editTextView)
+        editTextView.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(text: CharSequence, start: Int, count: Int, after: Int) {
+                logger.logD(logTag, "beforeTextChanged : $text")
             }
+
+            override fun onTextChanged(text: CharSequence, start: Int, before: Int, count: Int) {
+                logger.logD(logTag, "onTextChanged : $text")
+            }
+
+            override fun afterTextChanged(e: Editable) {
+            }
+        })
+        searchButton = findViewById(R.id.searchButton)
+        searchButton.setOnClickListener {
+            searchEditTextContainer.visibility = View.GONE
+            viewModel.searchPlace(editTextView.text.toString())
         }
 
-        viewModel.updateCurrentPosition(address = locationUtils.getCurrentAddress())*/
+        bottomSheetContainer.visibility = View.GONE
+        locationSource = FusedLocationSource(this@MainActivity, LOCATION_PERMISSION_REQUEST_CODE)
+        // onCreate 연결
+        mapView.onCreate(savedInstanceState)
+
+        recyclerView.adapter = placeListAdapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+
+        viewModel.searchData.observe(this, Observer {
+            bottomSheetContainer.visibility = View.VISIBLE
+            bottomSheetTitleText.text = String.format(getString(R.string.str_result_count), it.total)
+            updateMarker(it.items)
+            placeListAdapter.submitList(it.items)
+        })
+
+        bottomSheetTitleText = findViewById(R.id.bottomSheetTitleTextView)
+        searchEditTextContainer = findViewById(R.id.searchEditTextContainer)
+    }
+
+    private fun startService() {
+        logger.logD(logTag, "startService")
+        val intent = Intent(this, JeffService::class.java)
+        startForegroundService(intent)
+        // 맵 가져오기 -> onMapReady
+        mapView.getMapAsync(this)
     }
 
     private fun requestLocationPermission() {
@@ -93,12 +154,31 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         return true
     }
 
+    private fun updateMarker(items: List<ResponseItemsData>) {
+        items.forEachIndexed { index, place ->
+            Marker().apply {
+                val result = locationUtils.getGeocode(place.roadAddress.ifEmpty { place.address })
+                if (result.first != Double.MAX_VALUE && result.second != Double.MAX_VALUE) {
+                    position = LatLng(result.first, result.second)
+                    onClickListener = null
+                    map = naverMap
+                    tag = index + 1
+                    icon = MarkerIcons.BLACK
+                    iconTintColor = Color.RED
+                }
+            }
+        }
+    }
+
     override fun onMapReady(map: NaverMap) {
+        logger.logD(logTag, "onMapReady")
         // 지도상에 마커 표시
         Marker().apply {
             locationUtils.getLocationData()?.let { data ->
                 position = LatLng(data.latitude, data.longitude)
             }
+
+            position = LatLng(37.394728, 127.111226)//LatLng(data.latitude, data.longitude)
             setMap(map)
         }
 
@@ -109,5 +189,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1000
+    }
+
+    override fun onMapClick(p0: PointF, p1: LatLng) {
+        editTextView.visibility = View.GONE
     }
 }

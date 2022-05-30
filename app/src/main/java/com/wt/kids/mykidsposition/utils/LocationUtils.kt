@@ -3,11 +3,12 @@ package com.wt.kids.mykidsposition.utils
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.*
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import androidx.core.app.ActivityCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.IOException
-import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +19,7 @@ class LocationUtils @Inject constructor(
 ) {
     private val logTag = this::class.java.simpleName
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    private val geocoder = Geocoder(context)
 
     private val locationListener = LocationListener {
         val longitude = it.longitude
@@ -37,32 +39,20 @@ class LocationUtils @Inject constructor(
     }
 
     fun registerLocationSrv() {
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        /*if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
             || ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000L, 1.0f, locationListener)
-        }
+        }*/
     }
 
-    fun getCurrentAddress(): String {
-        var address ="현재 위치를 확인 할 수 없습니다."
-        val geocoder = Geocoder(context, Locale.KOREA)
-        val addressList = mutableListOf<Address>()
+    fun getGeocode(address: String): Pair<Double, Double> {
+        val list = geocoder.getFromLocationName(address,1)
 
-        try {
-            //세번째 파라미터는 좌표에 대해 주소를 리턴 받는 갯수로
-            //한좌표에 대해 두개이상의 이름이 존재할수있기에 주소배열을 리턴받기 위해 최대갯수 설정
-            getLocationData()?.let { data ->
-                addressList.addAll(geocoder.getFromLocation(data.latitude, data.longitude, 1).toMutableList())
-            }
-
-            if (addressList.isNotEmpty()) {
-                address = addressList[0].getAddressLine(0).toString()
-            }
-
-        } catch (e: IOException) {
-            e.printStackTrace()
+        return if (list.isEmpty()) {
+            Pair(Double.MAX_VALUE, Double.MAX_VALUE)
+        } else {
+            val result = list[0]
+            Pair(result.latitude, result.longitude)
         }
-
-        return address
     }
 }

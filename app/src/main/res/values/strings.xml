@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">MyKidsPosition</string>
+    <string name="str_add_position">위치 추가</string>
+    <string name="str_result_count">%s개의 결과</string>
+    <string name="str_hint_edit_text">장소를 입력해 주세요.</string>
 </resources>
