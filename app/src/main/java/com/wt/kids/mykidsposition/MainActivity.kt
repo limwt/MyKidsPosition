@@ -206,9 +206,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         naverMap = map
 
         naverMap.apply {
+            maxZoom = 18.0
+            minZoom = 10.0
             locationSource = fusedLocationSource
-            locationTrackingMode = LocationTrackingMode.Follow
-            uiSettings.isLocationButtonEnabled = true
+            // 지도 위치 이동
+            locationUtils.getLocationData()?.let {
+                val cameraUpdate = CameraUpdate.scrollTo(LatLng(it.latitude, it.longitude))
+                naverMap.moveCamera(cameraUpdate)
+            }
         }.also {
             val locationButton = findViewById<LocationButtonView>(R.id.locationButton)
             locationButton.map = it
