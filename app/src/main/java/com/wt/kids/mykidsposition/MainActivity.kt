@@ -25,6 +25,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
 import com.naver.maps.geometry.LatLng
 import com.naver.maps.geometry.Tm128
 import com.naver.maps.map.*
@@ -35,6 +37,7 @@ import com.naver.maps.map.widget.LocationButtonView
 import com.wt.kids.mykidsposition.data.response.ResponseItemsData
 import com.wt.kids.mykidsposition.model.MainViewModel
 import com.wt.kids.mykidsposition.service.JeffService
+import com.wt.kids.mykidsposition.utils.DataStoreUtils
 import com.wt.kids.mykidsposition.utils.LocationUtils
 import com.wt.kids.mykidsposition.utils.Logger
 import com.wt.kids.mykidsposition.view.adapter.PlaceListAdapter
@@ -42,6 +45,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -66,10 +70,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
 
 
     private val viewModel: MainViewModel by viewModels()
+    private val gSon = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
+    private val savedPlaceList = mutableListOf<ResponseItemsData>()
 
     @Inject lateinit var placeListAdapter: PlaceListAdapter
     @Inject lateinit var logger: Logger
     @Inject lateinit var locationUtils: LocationUtils
+    @Inject lateinit var dataStoreUtils: DataStoreUtils
 
     private lateinit var naverMap: NaverMap
     private lateinit var fusedLocationSource: FusedLocationSource
@@ -163,6 +170,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
 
         bottomSheetTitleText = findViewById(R.id.bottomSheetTitleTextView)
         searchEditTextContainer = findViewById(R.id.searchEditTextContainer)
+
+        // 저장된 위치를 bottomSheet 에 표시
+        CoroutineScope(Dispatchers.Main).launch {
+            dataStoreUtils.getPlace().collectLatest { item ->
+                if (item.isNotEmpty()) {
+                    val typeToken = object : TypeToken<List<ResponseItemsData>>() {}.type
+                    val result = gSon.fromJson<List<ResponseItemsData>>(item, typeToken)
+                    savedPlaceList.clear()
+                    savedPlaceList.addAll(result)
+                    logger.logD(logTag, "getPlace : $savedPlaceList")
+                }
+            }
+        }
     }
 
     private fun observingViewModel() {
@@ -219,9 +239,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
                 position = tm.toLatLng()
                 setOnClickListener {
                     if (it is Marker) {
-                        Toast.makeText(applicationContext, "위치를 등록했습니다.", Toast.LENGTH_SHORT).show()
-                        bottomSheetContainer.visibility = View.GONE
-                        moveToCurrentPosition()
+                        savePlace(place)
                     }
                     true
                 }
@@ -231,6 +249,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
                 iconTintColor = Color.RED
             }
         }
+    }
+
+    private fun savePlace(place: ResponseItemsData) {
+        Toast.makeText(applicationContext, "위치를 등록했습니다.", Toast.LENGTH_SHORT).show()
+        bottomSheetContainer.visibility = View.GONE
+
+        CoroutineScope(Dispatchers.IO).launch {
+            savedPlaceList.add(place)
+            dataStoreUtils.setPlace(gSon.toJson(savedPlaceList))
+        }
+
+        moveToCurrentPosition()
     }
 
     private fun moveToCurrentPosition() {
