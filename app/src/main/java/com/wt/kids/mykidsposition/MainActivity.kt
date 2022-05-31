@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.naver.maps.geometry.LatLng
+import com.naver.maps.geometry.Tm128
 import com.naver.maps.map.LocationTrackingMode
 import com.naver.maps.map.MapView
 import com.naver.maps.map.NaverMap
@@ -36,6 +37,7 @@ import com.wt.kids.mykidsposition.utils.Logger
 import com.wt.kids.mykidsposition.view.adapter.PlaceListAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClickListener {
@@ -157,31 +159,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
     private fun updateMarker(items: List<ResponseItemsData>) {
         items.forEachIndexed { index, place ->
             Marker().apply {
-                val result = locationUtils.getGeocode(place.roadAddress.ifEmpty { place.address })
-                if (result.first != Double.MAX_VALUE && result.second != Double.MAX_VALUE) {
-                    position = LatLng(result.first, result.second)
-                    onClickListener = null
-                    map = naverMap
-                    tag = index + 1
-                    icon = MarkerIcons.BLACK
-                    iconTintColor = Color.RED
-                }
+                val tm = Tm128(place.mapx.toDouble(), place.mapy.toDouble())
+                position = tm.toLatLng()
+                onClickListener = null
+                map = naverMap
+                tag = index + 1
+                icon = MarkerIcons.BLACK
+                iconTintColor = Color.RED
             }
         }
     }
 
     override fun onMapReady(map: NaverMap) {
         logger.logD(logTag, "onMapReady")
-        // 지도상에 마커 표시
-        Marker().apply {
-            locationUtils.getLocationData()?.let { data ->
-                position = LatLng(data.latitude, data.longitude)
-            }
-
-            position = LatLng(37.394728, 127.111226)//LatLng(data.latitude, data.longitude)
-            setMap(map)
-        }
-
         naverMap = map
         naverMap.locationSource = locationSource
         naverMap.locationTrackingMode = LocationTrackingMode.Follow

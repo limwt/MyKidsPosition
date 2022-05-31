@@ -25,11 +25,11 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/searchEditTextContainer"
-        android:layout_width="match_parent"
+        android:layout_width="400dp"
         android:layout_height="70dp"
         android:layout_margin="10dp"
         android:background="@color/gray_a50"
-        android:layout_gravity="start|top"
+        android:layout_gravity="center_horizontal"
         android:visibility="gone"
         tools:visibility="visible">
 
