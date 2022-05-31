@@ -29,6 +29,7 @@ import com.naver.maps.map.*
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.util.FusedLocationSource
 import com.naver.maps.map.util.MarkerIcons
+import com.naver.maps.map.widget.LocationButtonView
 import com.wt.kids.mykidsposition.data.response.ResponseItemsData
 import com.wt.kids.mykidsposition.model.MainViewModel
 import com.wt.kids.mykidsposition.service.JeffService
@@ -64,7 +65,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
     @Inject lateinit var locationUtils: LocationUtils
 
     private lateinit var naverMap: NaverMap
-    private lateinit var locationSource: FusedLocationSource
+    private lateinit var fusedLocationSource: FusedLocationSource
     private lateinit var mapView: MapView
     private lateinit var recyclerView: RecyclerView
     private lateinit var bottomSheetContainer: View
@@ -132,7 +133,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         }
 
         bottomSheetContainer.visibility = View.GONE
-        locationSource = FusedLocationSource(this@MainActivity, LOCATION_PERMISSION_REQUEST_CODE)
+        fusedLocationSource = FusedLocationSource(this@MainActivity, LOCATION_PERMISSION_REQUEST_CODE)
         // onCreate 연결
         mapView.onCreate(savedInstanceState)
 
@@ -183,7 +184,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         // 현재위치와 다른 장소를 안내할 경우 첫번째 위치로 이동...
         if (items.isNotEmpty()) {
             val tm = Tm128(items[0].mapx.toDouble(), items[0].mapy.toDouble())
-            val cameraUpdate = CameraUpdate.scrollAndZoomTo(tm.toLatLng(), 10.0).animate(CameraAnimation.Fly, 1000)
+            val cameraUpdate = CameraUpdate.scrollAndZoomTo(tm.toLatLng(), 15.0).animate(CameraAnimation.Fly, 1000)
             naverMap.moveCamera(cameraUpdate)
         }
 
@@ -203,8 +204,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
     override fun onMapReady(map: NaverMap) {
         logger.logD(logTag, "onMapReady")
         naverMap = map
-        naverMap.locationSource = locationSource
-        naverMap.locationTrackingMode = LocationTrackingMode.Follow
+
+        naverMap.apply {
+            locationSource = fusedLocationSource
+            locationTrackingMode = LocationTrackingMode.Follow
+            uiSettings.isLocationButtonEnabled = true
+        }.also {
+            val locationButton = findViewById<LocationButtonView>(R.id.locationButton)
+            locationButton.map = it
+        }
     }
 
     companion object {
