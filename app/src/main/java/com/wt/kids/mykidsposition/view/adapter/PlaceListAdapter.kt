@@ -11,16 +11,22 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.wt.kids.mykidsposition.R
 import com.wt.kids.mykidsposition.data.response.ResponseItemsData
+import com.wt.kids.mykidsposition.utils.Logger
+import dagger.hilt.android.scopes.ActivityScoped
+import javax.inject.Inject
 
-class PlaceListAdapter :
-    ListAdapter<ResponseItemsData, PlaceListAdapter.ItemViewHolder>(differ) {
-    inner class ItemViewHolder(private val view: View) : RecyclerView.ViewHolder(view) {
-        fun bind(data: ResponseItemsData) {
-            val titleTextView = view.findViewById<TextView>(R.id.titleTextView)
-            val addressTextView = view.findViewById<TextView>(R.id.addressTextView)
-            titleTextView.text = Html.fromHtml(data.title, HtmlCompat.FROM_HTML_MODE_LEGACY)
-            addressTextView.text = Html.fromHtml(data.roadAddress.ifEmpty { data.address }, HtmlCompat.FROM_HTML_MODE_LEGACY)
-        }
+@ActivityScoped
+class PlaceListAdapter @Inject constructor(
+    private val logger: Logger
+) : ListAdapter<ResponseItemsData, PlaceListAdapter.ItemViewHolder>(differ) {
+    private var itemClickListener: OnItemClickListener? = null
+
+    interface OnItemClickListener {
+        fun onItemClick(view: View, data: ResponseItemsData)
+    }
+
+    fun setOnItemClickListener(listener: OnItemClickListener?) {
+        itemClickListener = listener
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
@@ -32,7 +38,21 @@ class PlaceListAdapter :
         holder.bind(currentList[position])
     }
 
+    inner class ItemViewHolder(private val view: View) : RecyclerView.ViewHolder(view) {
+        fun bind(data: ResponseItemsData) {
+            val titleTextView = view.findViewById<TextView>(R.id.titleTextView)
+            val addressTextView = view.findViewById<TextView>(R.id.addressTextView)
+            titleTextView.text = Html.fromHtml(data.title, HtmlCompat.FROM_HTML_MODE_LEGACY)
+            addressTextView.text = Html.fromHtml(data.roadAddress.ifEmpty { data.address }, HtmlCompat.FROM_HTML_MODE_LEGACY)
+            view.setOnClickListener { v ->
+                itemClickListener?.onItemClick(v, data)
+            }
+        }
+    }
+
     companion object {
+        private val logTag = "PlaceListAdapter"
+
         val differ = object : DiffUtil.ItemCallback<ResponseItemsData>() {
             override fun areContentsTheSame(oldItem: ResponseItemsData, newItem: ResponseItemsData): Boolean {
                 return oldItem == newItem

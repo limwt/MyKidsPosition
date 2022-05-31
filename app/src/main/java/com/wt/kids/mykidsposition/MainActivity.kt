@@ -19,9 +19,10 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.naver.maps.geometry.LatLng
 import com.naver.maps.geometry.Tm128
@@ -58,9 +59,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         }
     }
 
-    private val placeListAdapter = PlaceListAdapter()
+
     private val viewModel: MainViewModel by viewModels()
 
+    @Inject lateinit var placeListAdapter: PlaceListAdapter
     @Inject lateinit var logger: Logger
     @Inject lateinit var locationUtils: LocationUtils
 
@@ -68,7 +70,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
     private lateinit var fusedLocationSource: FusedLocationSource
     private lateinit var mapView: MapView
     private lateinit var recyclerView: RecyclerView
-    private lateinit var bottomSheetContainer: View
+    private lateinit var bottomSheetBehavior: BottomSheetBehavior<ConstraintLayout>
+    private lateinit var bottomSheetContainer: ConstraintLayout
     private lateinit var searchPlaceButton: FloatingActionButton
     private lateinit var editTextView: EditText
     private lateinit var searchButton: ImageView
@@ -80,6 +83,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         logger.logD(logTag, "onCreate")
         setContentView(R.layout.activity_main)
         initViews(savedInstanceState)
+        observingViewModel()
 
         if (verifyPermissions(this)) {
             startService()
@@ -93,6 +97,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         mapView = findViewById(R.id.mapView)
         recyclerView = findViewById(R.id.recyclerView)
         bottomSheetContainer = findViewById(R.id.bottomSheetContainer)
+        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheetContainer)
         searchPlaceButton = findViewById(R.id.searchPlaceButton)
         searchPlaceButton.setOnClickListener {
             editTextView.setText("")
@@ -140,15 +145,29 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         recyclerView.adapter = placeListAdapter
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        viewModel.searchData.observe(this, Observer {
-            bottomSheetContainer.visibility = View.VISIBLE
-            bottomSheetTitleText.text = String.format(getString(R.string.str_result_count), it.total)
-            updateMarker(it.items)
-            placeListAdapter.submitList(it.items)
+        // 검색된 장소들 중 선택 시 이동...
+        placeListAdapter.setOnItemClickListener(object : PlaceListAdapter.OnItemClickListener {
+            override fun onItemClick(view: View, data: ResponseItemsData) {
+                val tm = Tm128(data.mapx.toDouble(), data.mapy.toDouble())
+                val cameraUpdate = CameraUpdate.scrollTo(tm.toLatLng())
+                naverMap.moveCamera(cameraUpdate)
+                // bottom sheet 내리기...
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            }
         })
 
         bottomSheetTitleText = findViewById(R.id.bottomSheetTitleTextView)
         searchEditTextContainer = findViewById(R.id.searchEditTextContainer)
+    }
+
+    private fun observingViewModel() {
+        viewModel.searchData.observe(this) {
+            bottomSheetContainer.visibility = View.VISIBLE
+            bottomSheetTitleText.text =
+                String.format(getString(R.string.str_result_count), it.total)
+            updateMarker(it.items)
+            placeListAdapter.submitList(it.items)
+        }
     }
 
     private fun goToSearch() {
