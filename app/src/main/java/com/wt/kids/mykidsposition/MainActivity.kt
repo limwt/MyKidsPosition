@@ -16,6 +16,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -38,6 +39,10 @@ import com.wt.kids.mykidsposition.utils.LocationUtils
 import com.wt.kids.mykidsposition.utils.Logger
 import com.wt.kids.mykidsposition.view.adapter.PlaceListAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
@@ -163,10 +168,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
     private fun observingViewModel() {
         viewModel.searchData.observe(this) {
             bottomSheetContainer.visibility = View.VISIBLE
-            bottomSheetTitleText.text =
-                String.format(getString(R.string.str_result_count), it.total)
+            bottomSheetTitleText.text = String.format(getString(R.string.str_result_count), it.total)
             updateMarker(it.items)
             placeListAdapter.submitList(it.items)
+            // bottom sheet 올리기...
+            bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
         }
     }
 
@@ -211,11 +217,29 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
             Marker().apply {
                 val tm = Tm128(place.mapx.toDouble(), place.mapy.toDouble())
                 position = tm.toLatLng()
-                onClickListener = null
+                setOnClickListener {
+                    if (it is Marker) {
+                        Toast.makeText(applicationContext, "위치를 등록했습니다.", Toast.LENGTH_SHORT).show()
+                        bottomSheetContainer.visibility = View.GONE
+                        moveToCurrentPosition()
+                    }
+                    true
+                }
                 map = naverMap
                 tag = index + 1
                 icon = MarkerIcons.BLACK
                 iconTintColor = Color.RED
+            }
+        }
+    }
+
+    private fun moveToCurrentPosition() {
+        CoroutineScope(Dispatchers.Main).launch {
+            delay(1000L)
+            // 지도 위치 이동
+            locationUtils.getLocationData()?.let {
+                val cameraUpdate = CameraUpdate.scrollTo(LatLng(it.latitude, it.longitude))
+                naverMap.moveCamera(cameraUpdate)
             }
         }
     }
@@ -228,11 +252,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
             maxZoom = 18.0
             minZoom = 10.0
             locationSource = fusedLocationSource
-            // 지도 위치 이동
-            locationUtils.getLocationData()?.let {
-                val cameraUpdate = CameraUpdate.scrollTo(LatLng(it.latitude, it.longitude))
-                naverMap.moveCamera(cameraUpdate)
-            }
+            moveToCurrentPosition()
         }.also {
             val locationButton = findViewById<LocationButtonView>(R.id.locationButton)
             locationButton.map = it
