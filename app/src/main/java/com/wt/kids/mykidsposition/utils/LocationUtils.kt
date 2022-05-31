@@ -3,7 +3,6 @@ package com.wt.kids.mykidsposition.utils
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -19,7 +18,6 @@ class LocationUtils @Inject constructor(
 ) {
     private val logTag = this::class.java.simpleName
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    private val geocoder = Geocoder(context)
 
     private val locationListener = LocationListener {
         val longitude = it.longitude
@@ -43,16 +41,5 @@ class LocationUtils @Inject constructor(
             || ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000L, 1.0f, locationListener)
         }*/
-    }
-
-    fun getGeocode(address: String): Pair<Double, Double> {
-        val list = geocoder.getFromLocationName(address,1)
-
-        return if (list.isEmpty()) {
-            Pair(Double.MAX_VALUE, Double.MAX_VALUE)
-        } else {
-            val result = list[0]
-            Pair(result.latitude, result.longitude)
-        }
     }
 }

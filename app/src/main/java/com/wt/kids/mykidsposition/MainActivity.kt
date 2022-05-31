@@ -9,7 +9,10 @@ import android.graphics.PointF
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
@@ -22,10 +25,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.naver.maps.geometry.LatLng
 import com.naver.maps.geometry.Tm128
-import com.naver.maps.map.LocationTrackingMode
-import com.naver.maps.map.MapView
-import com.naver.maps.map.NaverMap
-import com.naver.maps.map.OnMapReadyCallback
+import com.naver.maps.map.*
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.util.FusedLocationSource
 import com.naver.maps.map.util.MarkerIcons
@@ -94,6 +94,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         bottomSheetContainer = findViewById(R.id.bottomSheetContainer)
         searchPlaceButton = findViewById(R.id.searchPlaceButton)
         searchPlaceButton.setOnClickListener {
+            editTextView.setText("")
             searchEditTextContainer.visibility = View.VISIBLE
         }
         editTextView = findViewById(R.id.editTextView)
@@ -109,10 +110,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
             override fun afterTextChanged(e: Editable) {
             }
         })
+        editTextView.setOnEditorActionListener { _, action, keyEvent ->
+            var handled = false
+            logger.logD(logTag, "Editor Action $action, $keyEvent")
+
+            if (keyEvent.keyCode == KeyEvent.KEYCODE_ENTER) {
+                goToSearch()
+                handled = true
+            }
+
+            if (action == EditorInfo.IME_ACTION_DONE) {
+                handled = true
+            }
+
+            handled
+        }
+
         searchButton = findViewById(R.id.searchButton)
         searchButton.setOnClickListener {
-            searchEditTextContainer.visibility = View.GONE
-            viewModel.searchPlace(editTextView.text.toString())
+            goToSearch()
         }
 
         bottomSheetContainer.visibility = View.GONE
@@ -132,6 +148,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
 
         bottomSheetTitleText = findViewById(R.id.bottomSheetTitleTextView)
         searchEditTextContainer = findViewById(R.id.searchEditTextContainer)
+    }
+
+    private fun goToSearch() {
+        val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        inputMethodManager.hideSoftInputFromWindow(editTextView.windowToken, 0)
+        searchEditTextContainer.visibility = View.GONE
+        viewModel.searchPlace(editTextView.text.toString())
     }
 
     private fun startService() {
@@ -157,6 +180,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
     }
 
     private fun updateMarker(items: List<ResponseItemsData>) {
+        // 현재위치와 다른 장소를 안내할 경우 첫번째 위치로 이동...
+        if (items.isNotEmpty()) {
+            val tm = Tm128(items[0].mapx.toDouble(), items[0].mapy.toDouble())
+            val cameraUpdate = CameraUpdate.scrollAndZoomTo(tm.toLatLng(), 10.0).animate(CameraAnimation.Fly, 1000)
+            naverMap.moveCamera(cameraUpdate)
+        }
+
         items.forEachIndexed { index, place ->
             Marker().apply {
                 val tm = Tm128(place.mapx.toDouble(), place.mapy.toDouble())
