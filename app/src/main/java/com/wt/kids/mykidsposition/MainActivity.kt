@@ -3,6 +3,7 @@ package com.wt.kids.mykidsposition
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.PointF
@@ -23,6 +24,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.GsonBuilder
@@ -36,7 +38,9 @@ import com.naver.maps.map.util.MarkerIcons
 import com.naver.maps.map.widget.LocationButtonView
 import com.wt.kids.mykidsposition.data.response.ResponseItemsData
 import com.wt.kids.mykidsposition.model.MainViewModel
+import com.wt.kids.mykidsposition.receiver.SmsReceiver
 import com.wt.kids.mykidsposition.service.JeffService
+import com.wt.kids.mykidsposition.utils.AppSignatureHelper
 import com.wt.kids.mykidsposition.utils.DataStoreUtils
 import com.wt.kids.mykidsposition.utils.LocationUtils
 import com.wt.kids.mykidsposition.utils.Logger
@@ -72,11 +76,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
     private val viewModel: MainViewModel by viewModels()
     private val gSon = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
     private val savedPlaceList = mutableListOf<ResponseItemsData>()
+    private val smsReceiver = SmsReceiver()
 
     @Inject lateinit var placeListAdapter: PlaceListAdapter
     @Inject lateinit var logger: Logger
     @Inject lateinit var locationUtils: LocationUtils
     @Inject lateinit var dataStoreUtils: DataStoreUtils
+
+    @Inject lateinit var appSignatureHelper: AppSignatureHelper
 
     private lateinit var naverMap: NaverMap
     private lateinit var fusedLocationSource: FusedLocationSource
@@ -95,6 +102,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         logger.logD(logTag, "onCreate")
         setContentView(R.layout.activity_main)
         initViews(savedInstanceState)
+        createSmsRetrieverClient()
         observingViewModel()
 
         if (verifyPermissions(this)) {
@@ -104,8 +112,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        destroySmsRetrieverClient()
+    }
+
     private fun initViews(savedInstanceState: Bundle?) {
-        logger.logD(logTag, "initViews")
+        logger.logD(logTag, "initViews : ${appSignatureHelper.appSignatures}")
         mapView = findViewById(R.id.mapView)
         recyclerView = findViewById(R.id.recyclerView)
         bottomSheetContainer = findViewById(R.id.bottomSheetContainer)
@@ -160,11 +173,29 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
         // 검색된 장소들 중 선택 시 이동...
         placeListAdapter.setOnItemClickListener(object : PlaceListAdapter.OnItemClickListener {
             override fun onItemClick(view: View, data: ResponseItemsData) {
-                val tm = Tm128(data.mapx.toDouble(), data.mapy.toDouble())
-                val cameraUpdate = CameraUpdate.scrollTo(tm.toLatLng())
-                naverMap.moveCamera(cameraUpdate)
-                // bottom sheet 내리기...
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                if (view.id == R.id.deleteButton) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        if (savedPlaceList.contains(data)) {
+                            savedPlaceList.remove(data)
+                        }
+
+                        dataStoreUtils.setPlace(gSon.toJson(savedPlaceList))
+
+                        // 지도 위치 이동
+                        locationUtils.getLocationData()?.let {
+                            val cameraUpdate = CameraUpdate.scrollTo(LatLng(it.latitude, it.longitude))
+                            naverMap.moveCamera(cameraUpdate)
+                        }
+                        // bottom sheet 내리기...
+                        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                    }
+                } else {
+                    val tm = Tm128(data.mapx.toDouble(), data.mapy.toDouble())
+                    val cameraUpdate = CameraUpdate.scrollTo(tm.toLatLng())
+                    naverMap.moveCamera(cameraUpdate)
+                    // bottom sheet 내리기...
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                }
             }
         })
 
@@ -180,9 +211,40 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
                     savedPlaceList.clear()
                     savedPlaceList.addAll(result)
                     logger.logD(logTag, "getPlace : $savedPlaceList")
+
+                    bottomSheetContainer.visibility = View.VISIBLE
+                    bottomSheetTitleText.text = String.format(getString(R.string.str_saved_count), savedPlaceList.size)
+                    placeListAdapter.setSheetType(PlaceListAdapter.SheetType.TYPE_SAVED)
+                    placeListAdapter.submitList(savedPlaceList)
+                    placeListAdapter.notifyDataSetChanged()
                 }
             }
         }
+    }
+
+    private fun createSmsRetrieverClient()  {
+        logger.logD(logTag, "createSmsRetrieverClient")
+        IntentFilter().apply {
+            addAction(SmsRetriever.SMS_RETRIEVED_ACTION)
+        }.also {
+            registerReceiver(smsReceiver, it)
+        }
+
+        val client = SmsRetriever.getClient(this)
+        client.startSmsRetriever().apply {
+            addOnSuccessListener {
+                logger.logD(logTag, "Success")
+            }
+            addOnFailureListener {
+                logger.logD(logTag, "Failure")
+            }
+        }
+    }
+
+    private fun destroySmsRetrieverClient() {
+        logger.logD(logTag, "destroySmsRetrieverClient")
+        unregisterReceiver(smsReceiver)
+
     }
 
     private fun observingViewModel() {
@@ -190,6 +252,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
             bottomSheetContainer.visibility = View.VISIBLE
             bottomSheetTitleText.text = String.format(getString(R.string.str_result_count), it.total)
             updateMarker(it.items)
+            placeListAdapter.setSheetType(PlaceListAdapter.SheetType.TYPE_SEARCH)
             placeListAdapter.submitList(it.items)
             // bottom sheet 올리기...
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
@@ -239,6 +302,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NaverMap.OnMapClic
                 position = tm.toLatLng()
                 setOnClickListener {
                     if (it is Marker) {
+                        //test
+                        viewModel.searchAddress("${tm.toLatLng().longitude},${tm.toLatLng().latitude}")
                         savePlace(place)
                     }
                     true

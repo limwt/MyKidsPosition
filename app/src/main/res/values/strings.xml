@@ -1,8 +1,12 @@
 <resources>
     <string name="app_name">MyKidsPosition</string>
     <string name="str_add_position">위치 추가</string>
+    <string name="str_saved_count">저장된 %s개의 장소</string>
     <string name="str_result_count">%s개의 결과</string>
     <string name="str_hint_edit_text">장소를 입력해 주세요.</string>
     <string name="str_register_place">등록</string>
     <string name="str_cancel_place">취소</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="str_delete_button">삭제</string>
 </resources>

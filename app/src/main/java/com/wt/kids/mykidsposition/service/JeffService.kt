@@ -8,7 +8,6 @@ import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.wt.kids.mykidsposition.BuildConfig
-import com.wt.kids.mykidsposition.utils.LocationUtils
 import com.wt.kids.mykidsposition.utils.Logger
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -20,7 +19,6 @@ class JeffService : Service() {
     private val channelName = "Jeff"
 
     @Inject lateinit var logger: Logger
-    @Inject lateinit var locationUtils: LocationUtils
 
     override fun onCreate() {
         super.onCreate()
@@ -31,7 +29,6 @@ class JeffService : Service() {
         super.onStartCommand(intent, flags, startId)
         logger.logD(logTag, "onStartCommand")
         startNotificationService()
-        locationUtils.registerLocationSrv()
         return START_STICKY
     }
 

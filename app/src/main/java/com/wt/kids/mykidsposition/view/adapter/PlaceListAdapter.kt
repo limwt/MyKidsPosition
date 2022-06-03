@@ -4,6 +4,7 @@ import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -21,6 +22,14 @@ class PlaceListAdapter @Inject constructor(
 ) : ListAdapter<ResponseItemsData, PlaceListAdapter.ItemViewHolder>(differ) {
     private var itemClickListener: OnItemClickListener? = null
 
+    enum class SheetType {
+        TYPE_NONE,
+        TYPE_SEARCH,
+        TYPE_SAVED
+    }
+
+    private var currentType = SheetType.TYPE_NONE
+
     interface OnItemClickListener {
         fun onItemClick(view: View, data: ResponseItemsData)
     }
@@ -28,6 +37,12 @@ class PlaceListAdapter @Inject constructor(
     fun setOnItemClickListener(listener: OnItemClickListener?) {
         itemClickListener = listener
     }
+
+    fun setSheetType(type: SheetType) {
+        currentType = type
+    }
+
+    fun getCurrentSheetType() = currentType
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -40,11 +55,20 @@ class PlaceListAdapter @Inject constructor(
 
     inner class ItemViewHolder(private val view: View) : RecyclerView.ViewHolder(view) {
         fun bind(data: ResponseItemsData) {
+            val container = view.findViewById<View>(R.id.placeTextContainer)
             val titleTextView = view.findViewById<TextView>(R.id.titleTextView)
             val addressTextView = view.findViewById<TextView>(R.id.addressTextView)
+            val deleteButton = view.findViewById<ImageView>(R.id.deleteButton)
+            deleteButton.visibility = if (currentType == SheetType.TYPE_SAVED) View.VISIBLE else View.GONE
+
+            deleteButton.setOnClickListener { v ->
+                itemClickListener?.onItemClick(v, data)
+            }
+
             titleTextView.text = Html.fromHtml(data.title, HtmlCompat.FROM_HTML_MODE_LEGACY)
             addressTextView.text = Html.fromHtml(data.roadAddress.ifEmpty { data.address }, HtmlCompat.FROM_HTML_MODE_LEGACY)
-            view.setOnClickListener { v ->
+
+            container.setOnClickListener { v ->
                 itemClickListener?.onItemClick(v, data)
             }
         }

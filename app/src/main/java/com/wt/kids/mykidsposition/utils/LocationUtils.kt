@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -18,11 +19,13 @@ class LocationUtils @Inject constructor(
 ) {
     private val logTag = this::class.java.simpleName
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    private var registered = false
 
     private val locationListener = LocationListener {
         val longitude = it.longitude
         val latitude = it.latitude
-        logger.logD(logTag, "update location : $longitude, $latitude")
+        //logger.logD(logTag, "update location : $longitude, $latitude")
+        Toast.makeText(context, "Update location $longitude, $latitude", Toast.LENGTH_SHORT).show()
     }
 
     fun getLocationData(): Location? {
@@ -37,9 +40,28 @@ class LocationUtils @Inject constructor(
     }
 
     fun registerLocationSrv() {
-        /*if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (registered) {
+            return
+        }
+
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
             || ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            logger.logD(logTag, "registerLocationSrv")
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000L, 1.0f, locationListener)
-        }*/
+            registered = !registered
+        }
+    }
+
+    fun unregisterLocationSrv() {
+        if (!registered) {
+            return
+        }
+
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            || ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            logger.logD(logTag, "unregisterLocationSrv")
+            locationManager.removeUpdates(locationListener)
+            registered = !registered
+        }
     }
 }
